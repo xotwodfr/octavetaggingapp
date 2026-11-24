@@ -14,10 +14,12 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
 pub fn default_settings() -> AppSettings {
     AppSettings {
         spicy_lyrics_api_key: String::new(),
+        spotify_client_id: String::new(),
+        spotify_client_secret: String::new(),
         source_folder: None,
         destination_folder: None,
         filename_template: "{track:02} - {title}".to_string(),
-        folder_template: "{artist}/{album}".to_string(),
+        folder_template: "{albumartist}/{album}".to_string(),
         embed_lyrics: true,
         save_lyrics_sidecar: false,
     }

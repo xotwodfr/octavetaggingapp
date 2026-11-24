@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AlbumRelease,
   AppSettings,
   ApplyResult,
   ApplyTrackChange,
@@ -15,6 +16,8 @@ export const api = {
   readTrack: (path: string) => invoke<TrackRecord>("read_track", { path }),
   lookupMusicBrainz: (params: { artist?: string; title?: string; album?: string; limit?: number }) =>
     invoke<MusicBrainzResult[]>("lookup_musicbrainz", params),
+  resolveAlbumUrl: (params: { input: string; spotifyClientId?: string; spotifyClientSecret?: string }) =>
+    invoke<AlbumRelease>("resolve_album_url", params),
   lookupSpicyLyrics: (params: { apiKey: string; artist: string; title: string; album?: string }) =>
     invoke<LyricsResult>("lookup_spicy_lyrics", params),
   applyChanges: (params: { changes: ApplyTrackChange[]; filenameTemplate: string; folderTemplate: string }) =>

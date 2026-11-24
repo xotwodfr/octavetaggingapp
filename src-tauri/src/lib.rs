@@ -1,3 +1,4 @@
+mod album;
 mod commands;
 mod lyrics;
 mod metadata;
@@ -20,6 +21,7 @@ pub fn run() {
             commands::scan_folder,
             commands::read_track,
             commands::lookup_musicbrainz,
+            commands::resolve_album_url,
             commands::lookup_spicy_lyrics,
             commands::apply_changes,
             commands::load_settings,

@@ -1,5 +1,7 @@
 export interface AppSettings {
   spicyLyricsApiKey: string;
+  spotifyClientId: string;
+  spotifyClientSecret: string;
   sourceFolder?: string | null;
   destinationFolder?: string | null;
   filenameTemplate: string;
@@ -82,6 +84,28 @@ export interface MusicBrainzResult {
   score?: number | null;
 }
 
+export interface AlbumTrack {
+  trackNumber?: number | null;
+  title: string;
+  artist?: string | null;
+  album: string;
+  albumArtist?: string | null;
+  date?: string | null;
+}
+
+export interface AlbumRelease {
+  source: string;
+  sourceId: string;
+  album: string;
+  albumArtist?: string | null;
+  date?: string | null;
+  year?: string | null;
+  coverArtUrl?: string | null;
+  trackTotal?: number | null;
+  tracks: AlbumTrack[];
+  warnings: string[];
+}
+
 export interface LyricsResult {
   status: string;
   lyrics?: string | null;
@@ -118,4 +142,5 @@ export interface TrackDraft {
   targetPath: string;
   applyStatus?: "pending" | "ok" | "error";
   applyMessage?: string | null;
+  matchedReleaseTrack?: number | null;
 }

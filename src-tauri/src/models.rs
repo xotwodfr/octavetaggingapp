@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub spicy_lyrics_api_key: String,
+    pub spotify_client_id: String,
+    pub spotify_client_secret: String,
     pub source_folder: Option<String>,
     pub destination_folder: Option<String>,
     pub filename_template: String,
@@ -21,7 +23,7 @@ impl AppSettings {
                 self.filename_template
             },
             folder_template: if self.folder_template.trim().is_empty() {
-                "{artist}/{album}".to_string()
+                "{albumartist}/{album}".to_string()
             } else {
                 self.folder_template
             },
@@ -116,6 +118,32 @@ pub struct MusicBrainzResult {
     pub track_total: Option<u32>,
     pub cover_art_url: Option<String>,
     pub score: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumTrack {
+    pub track_number: Option<u32>,
+    pub title: String,
+    pub artist: Option<String>,
+    pub album: String,
+    pub album_artist: Option<String>,
+    pub date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumRelease {
+    pub source: String,
+    pub source_id: String,
+    pub album: String,
+    pub album_artist: Option<String>,
+    pub date: Option<String>,
+    pub year: Option<String>,
+    pub cover_art_url: Option<String>,
+    pub track_total: Option<u32>,
+    pub tracks: Vec<AlbumTrack>,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

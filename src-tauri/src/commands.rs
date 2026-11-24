@@ -1,6 +1,7 @@
+use crate::album;
 use crate::lyrics;
 use crate::metadata;
-use crate::models::{ApplyResult, ApplyTrackChange, AppSettings, LyricsResult, MusicBrainzResult, ScanResult, TrackRecord};
+use crate::models::{AlbumRelease, ApplyResult, ApplyTrackChange, AppSettings, LyricsResult, MusicBrainzResult, ScanResult, TrackRecord};
 use crate::scan;
 use crate::settings;
 use crate::tag;
@@ -43,6 +44,27 @@ pub async fn lookup_musicbrainz(
 }
 
 #[tauri::command]
+pub async fn resolve_album_url(
+    input: String,
+    spotify_client_id: Option<String>,
+    spotify_client_secret: Option<String>,
+) -> Result<AlbumRelease, String> {
+    let trimmed = input.trim();
+    match album::parse_album_url(trimmed) {
+        Some(album::AlbumUrl::Deezer(id)) => album::resolve_deezer_album(&id).await,
+        Some(album::AlbumUrl::Spotify(id)) => {
+            album::resolve_spotify_album(
+                &id,
+                spotify_client_id.as_deref(),
+                spotify_client_secret.as_deref(),
+            )
+            .await
+        }
+        None => Err(format!("Not a supported album URL: {trimmed}")),
+    }
+}
+
+#[tauri::command]
 pub async fn lookup_spicy_lyrics(
     api_key: String,
     artist: String,
@@ -73,10 +95,10 @@ fn sanitize_component(s: &str) -> String {
 }
 
 fn render_template(template: &str, tags: &crate::models::TrackTags, fallback_name: &str) -> String {
-    let title = tags.title.clone().unwrap_or_else(|| fallback_name.to_string());
-    let artist = tags.artist.clone().unwrap_or_else(|| "Unknown Artist".to_string());
-    let album = tags.album.clone().unwrap_or_else(|| "Unknown Album".to_string());
-    let album_artist = tags.album_artist.clone().unwrap_or_else(|| artist.clone());
+    let title = tags.title.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| fallback_name.to_string());
+    let artist = tags.artist.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| "Unknown Artist".to_string());
+    let album = tags.album.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| "Unknown Album".to_string());
+    let album_artist = tags.album_artist.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| artist.clone());
     let date = tags.date.clone().unwrap_or_default();
     let track = tags.track_number.unwrap_or(0);
     let track_total = tags.track_total.unwrap_or(0);
@@ -105,7 +127,6 @@ fn resolve_target_path(change: &ApplyTrackChange, filename_template: &str, folde
     let folder_rel = render_template(folder_template, &change.tags, fallback);
 
     let target = PathBuf::from(&change.target_path);
-    // If target_path is a directory or ends up being a dir-like destination, build from templates.
     let final_path = if target.extension().is_none() {
         let mut p = target;
         for comp in folder_rel.split('/') {
@@ -115,7 +136,18 @@ fn resolve_target_path(change: &ApplyTrackChange, filename_template: &str, folde
         p.push(format!("{}.flac", sanitize_component(&file_base)));
         p
     } else {
-        target
+        // Treat provided target as destination root-ish when it points to dir; otherwise keep as explicit file path.
+        if target.is_dir() {
+            let mut p = target;
+            for comp in folder_rel.split('/') {
+                let c = comp.trim();
+                if !c.is_empty() { p.push(sanitize_component(c)); }
+            }
+            p.push(format!("{}.flac", sanitize_component(&file_base)));
+            p
+        } else {
+            target
+        }
     };
     Ok(final_path)
 }
@@ -168,7 +200,6 @@ fn apply_one(change: ApplyTrackChange, filename_template: &str, folder_template:
             fs::create_dir_all(parent).map_err(|e| format!("Failed to create target directory: {e}"))?;
         }
 
-        // Work on a temp copy to avoid corrupting original on failure.
         let temp = target.with_extension("tmp.flac");
         if temp.exists() { let _ = fs::remove_file(&temp); }
         fs::copy(&source, &temp).map_err(|e| format!("Failed to copy source to temp: {e}"))?;
@@ -207,9 +238,7 @@ fn apply_one(change: ApplyTrackChange, filename_template: &str, folder_template:
             ensure_unique_path(&target)
         };
 
-        // Replace/move into place
         if final_target.exists() && source.canonicalize().ok() != final_target.canonicalize().ok() {
-            // ensure_unique_path should have prevented this, but be safe
             return Err(format!("Target already exists: {}", final_target.display()));
         }
 
